@@ -1,0 +1,144 @@
+/**
+ * File: dominosa.cpp
+ * ------------------
+ * This animates the brute-force discovery of a solution
+ * to a 2 x n dominosa board.
+ */
+
+#include <iostream>
+#include <cmath>
+using namespace std;
+
+#include "simpio.h"
+#include "grid.h"
+#include "random.h"
+#include "dominosa-graphics.h"
+#include "set.h"
+
+static bool boardSolver(Vector<Set<int> > pairs, Vector<coord> numbers, Vector<coord> usedNumbers, DominosaDisplay& display, Grid<int>& board);
+
+static void welcome() {
+	cout << "Here we'll illustrate the use of recursive backtracking to" << endl;
+	cout << "discover a solution to various 2 x n Dominosa boards.  In some" << endl;
+	cout << "cases there won't be any solutions, and in the cases where there are" << endl;
+	cout << "multiple solutions, we'll just find one of them." << endl;
+	cout << endl;
+}
+
+static int getIntegerInRange(string prompt, int low, int high) {
+	while (true) {
+		int response = getInteger(prompt);
+		if (response == 0 || (response >= low && response <= high)) return response;
+		cout << "Sorry, but I can't use that number." << endl;
+	}
+}
+
+static void populateBoard(Grid<int>& board, int low, int high) {
+	for (int row = 0; row < board.numRows(); row++) {
+		for (int col = 0; col < board.numCols(); col++) {
+			board[row][col] = randomInteger(low, high);
+		}
+	}
+}
+
+static bool canSolveBoard(DominosaDisplay& display, Grid<int>& board) {
+    // replace this with your own solution, which will almost certainly be a wrapper function
+    Vector<Set<int> >  pairs;
+    Vector<coord> numbers;
+    for (int i = 0; i < board.numCols(); i++){
+        coord newCoord;
+        newCoord.row = 0;
+        newCoord.col = i;
+        numbers.add(newCoord);
+        newCoord.row = 1;
+        numbers.add(newCoord);
+    }
+    Vector<coord> usedNumbers;
+
+    return boardSolver(pairs, numbers, usedNumbers, display, board);
+}
+
+static bool vectorContainsCoord(coord c, Vector<coord> v){
+    for (int i = 0; i < v.size(); i++){
+        if (v[i].row == c.row && v[i].col == c.col) return true;
+    }
+    return false;
+}
+
+static bool vectorContainsSet(Set<int> searchSet, Vector<Set<int> > v){
+    for (int i = 0; i < v.size(); i++){
+        if (v[i] == searchSet) return true;
+    }
+    return false;
+}
+
+static bool boardSolver(Vector<Set<int> > pairs, Vector<coord> numbers, Vector<coord > usedNumbers, DominosaDisplay& display, Grid<int>& board){
+    //cout << numbers.size() << endl;
+    //cout << numbers.toString() << endl;
+    for (int i = 0; i < numbers.size()-1; i++){
+        cout << i << endl;
+        if (!vectorContainsCoord(numbers[i], usedNumbers)){
+            if (i+1 < numbers.size() && !vectorContainsCoord(numbers[i+1], usedNumbers)){
+                Set<int> pair;
+                pair.add(board.get(numbers[i].row, numbers[i].col));
+                pair.add(board.get(numbers[i+1].row, numbers[i+1].col));
+                if (!vectorContainsSet(pair, pairs)){
+                    pairs.add(pair);
+                    usedNumbers.add(numbers[i]);
+                    usedNumbers.add(numbers[i+1]);
+                    display.provisonallyPair(numbers[i], numbers[i+1]);
+                    if (boardSolver(pairs, numbers, usedNumbers, display, board)) return true;
+                    else{
+                        break;
+                    }
+                }else{
+                    display.vetoProvisionalPairing(numbers[i], numbers[i+1]);
+                    display.eraseProvisionalPairing(numbers[i], numbers[i+1]);
+                    return false;
+                }
+            }
+            else if (i+2 < numbers.size() && !vectorContainsCoord(numbers[i+2], usedNumbers)){
+                Set<int> pair;
+                pair.add(board.get(numbers[i].row, numbers[i].col));
+                pair.add(board.get(numbers[i+2].row, numbers[i+2].col));
+                if (!vectorContainsSet(pair, pairs)){
+                    pairs.add(pair);
+                    usedNumbers.add(numbers[i]);
+                    usedNumbers.add(numbers[i+2]);
+                    display.provisonallyPair(numbers[i], numbers[i+2]);
+                    if (boardSolver(pairs, numbers, usedNumbers, display, board)) return true;
+                    else{
+                        break;
+                    }
+                }else{
+                    display.vetoProvisionalPairing(numbers[i], numbers[i+2]);
+                    display.eraseProvisionalPairing(numbers[i], numbers[i+2]);
+                    return false;
+                }return false;
+            }
+        }
+    }return true;
+}
+
+int main() {
+    setRandomSeed(1);
+	DominosaDisplay display;
+	welcome();
+	while (true) {
+        int numColumns = getIntegerInRange("How many columns? [0 to exit]: ", 2, 25);
+		if (numColumns == 0) break;
+		Grid<int> board(2, numColumns);
+		populateBoard(board, 1, ceil(2 * sqrt((double) numColumns)));
+		display.drawBoard(board);
+		if (canSolveBoard(display, board)) {
+			cout << "The board can be solved, and one such solution is drawn above." << endl;
+		} else {
+			cout << "This board you see can't be solved." << endl;
+        }
+        cout << board.get(0,1);
+	}
+	
+	cout << "Okay, thanks for watching, and come back soon." << endl;
+    cout << "Click the mouse anywhere in the window to exit." << endl;
+	return 0;
+}
